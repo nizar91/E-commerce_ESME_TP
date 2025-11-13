@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mes commandes</title>
+</head>
+<body>
+    <h1>Commandes de {{ username }}</h1>
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% elif purchases %}
+        <ul>
+            {% for order in purchases %}
+                <li>Commande #{{ order.id }} : {{ order.item }} (x{{ order.quantity }})</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucune commande pour le moment.</p>
+    {% endif %}
+    <a href="{{ url_for('home') }}">Retour a l'accueil</a>
+</body>
+</html>

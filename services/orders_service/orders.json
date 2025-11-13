@@ -1,0 +1,46 @@
+{
+    "victor": [
+        {
+            "id": 1,
+            "item": "Livre",
+            "quantity": 2
+        }
+    ],
+    "nizar": [
+        {
+            "id": 1,
+            "item": "Article 1",
+            "quantity": 1
+        },
+        {
+            "id": 2,
+            "item": "Article 1",
+            "quantity": 1
+        },
+        {
+            "id": 3,
+            "item": "Article 1",
+            "quantity": 1
+        },
+        {
+            "id": 4,
+            "item": "Article 1",
+            "quantity": 1
+        },
+        {
+            "id": 5,
+            "item": "Article 1",
+            "quantity": 1
+        },
+        {
+            "id": 6,
+            "item": "Article 1",
+            "quantity": 1
+        },
+        {
+            "id": 7,
+            "item": "Article 1",
+            "quantity": 1
+        }
+    ]
+}

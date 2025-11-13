@@ -1,0 +1,12 @@
+# Environnement virtuel
+env/
+
+# Fichiers Python inutiles
+__pycache__/
+*.pyc
+
+# Dossier VSCode
+.vscode/
+
+# Logs
+*.log

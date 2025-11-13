@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Commande</title>
+</head>
+<body>
+    {% if error %}
+        <h1>Oups...</h1>
+        <p style="color:red;">{{ error }}</p>
+    {% else %}
+        <h1>Bravo {{ username }} !</h1>
+        <p>La commande pour l'article <strong>{{ article.name }}</strong> a ete enregistree.</p>
+    {% endif %}
+    <a href="{{ url_for('home') }}">Retour a la liste</a>
+</body>
+</html>
