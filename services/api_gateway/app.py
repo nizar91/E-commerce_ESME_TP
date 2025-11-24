@@ -24,12 +24,39 @@ def _forward_json(method, url, *, headers=None, json_body=None):
     return resp, None
 
 
+def _introspect_oauth(token: str):
+    try:
+        resp = requests.post(
+            f"{AUTH_SERVICE_URL}/oauth/introspect",
+            data={"token": token},
+            timeout=3,
+        )
+    except requests.RequestException:
+        return None
+
+    if resp.status_code != 200:
+        return None
+
+    data = resp.json()
+    if not data.get("active"):
+        return None
+
+    return data.get("username") or data.get("client_id")
+
+
 def _validate_token():
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         return None, (jsonify({"error": "Authorization: Bearer <token> required"}), 401)
 
     token = auth_header.split(" ", 1)[1]
+
+    # Essai OAuth2 (tokens issus d'Authlib)
+    oauth_identity = _introspect_oauth(token)
+    if oauth_identity:
+        return oauth_identity, None
+
+    # Fallback pour les anciens JWT utilisés par le front
     resp, error = _forward_json(
         "POST",
         f"{AUTH_SERVICE_URL}/auth/validate",

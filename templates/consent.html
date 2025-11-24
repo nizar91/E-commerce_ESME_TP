@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Consentement OAuth2</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        .card { border: 1px solid #ddd; border-radius: 6px; padding: 1.5rem; max-width: 700px; }
+        .actions { margin-top: 1rem; }
+        .error { color: #c0392b; }
+        label { display: block; margin-top: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Partage d'accès</h1>
+        <p>Le client <strong>{{ client.client_name }}</strong> demande l'accès avec la portée : <code>{{ grant.request.scope }}</code>.</p>
+
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        {% if not user %}
+            <p>Identifiez-vous pour continuer :</p>
+            <form method="post">
+                <input type="hidden" name="confirm" value="yes">
+                <label>Nom d'utilisateur
+                    <input type="text" name="username" required>
+                </label>
+                <label>Mot de passe
+                    <input type="password" name="password" required>
+                </label>
+                <div class="actions">
+                    <button type="submit">Se connecter et autoriser</button>
+                </div>
+            </form>
+        {% else %}
+            <p>Connecté en tant que <strong>{{ user.username }}</strong>. Souhaitez-vous autoriser ce client ?</p>
+            <form method="post">
+                <button type="submit" name="confirm" value="yes">Autoriser</button>
+                <button type="submit" name="confirm" value="no">Refuser</button>
+            </form>
+        {% endif %}
+    </div>
+</body>
+</html>
