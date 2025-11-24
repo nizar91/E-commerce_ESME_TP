@@ -74,6 +74,22 @@ Le front conserve aussi le refresh token fourni par le service Auth. Si l'API re
 
 Tous les formulaires HTML passent donc par la Gateway, ce qui permet de presenter la separation front/back lors de la restitution.
 
+## Nouvelle brique Authorization Server (Authlib)
+Le service `auth_service` expose maintenant un serveur OAuth2 propulsé par Authlib avec :
+
+- **Authorization Code + PKCE** (client `student-spa`, redirect `http://127.0.0.1:9000/callback`). PKCE est exigé uniquement pour les clients publics (sans secret) afin d'éviter le vol de code d'autorisation.
+- **Client Credentials** (client `orders-cron` avec secret `orders-secret`).
+- **Ecran de consentement** (template `templates/consent.html`) demandant la connexion puis l'approbation de la portée demandée.
+- **Endpoint d'introspection** (`POST /oauth/introspect`) utilisé par la gateway avant de retomber sur l'ancien `/auth/validate`.
+
+Pour tester rapidement sans navigateur, un client Python est fourni :
+
+```bash
+python scripts/oauth_client.py --username <user> --password <pwd>
+```
+
+Le script réalise un flux Authorization Code + PKCE avec consentement programmatique, puis un flux Client Credentials.
+
 ## Utilisation (exemple CURL)
 
 ```bash
