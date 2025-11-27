@@ -98,11 +98,4 @@ python scripts/oauth_client.py --username alice --password passw0rd
 
 Il exécute un Authorization Code + PKCE (avec consentement programmatique) puis un Client Credentials (`orders-cron`).
 
-## 6. Ce qu’il faut retenir pour la soutenance
-
-- **Responsabilités isolées** : Auth = identité/OAuth2, User = profils, Orders = métier, Gateway = façade, Front = client.
-- **Sécurité** : PBKDF2, tokens signés, introspection OAuth2, refresh tokens, PKCE obligatoire pour les clients publics.
-- **Interopérabilité** : tout parle HTTP/JSON, ce qui facilite le monitoring, la montée en charge et l’ajout de nouveaux services/clients.
-- **Démonstrations rapides** : `run_stack.ps1` pour lancer, `app.py` pour montrer l’UI OAuth2, `scripts/oauth_client.py` pour prouver que les flux sont standards.
-
 Cette base permet d’aborder scalabilité (multiplication des instances par service), résilience (timeouts + retries) et patterns modernes d’authentification (OAuth2 / PKCE / Client Credentials) sans se perdre dans une stack trop lourde.
