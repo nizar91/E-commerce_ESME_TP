@@ -10,7 +10,7 @@ DB_PATH = os.path.join(BASE_DIR, "users.db")
 
 
 def init_db():
-    """Create the SQLite database if it does not exist yet."""
+    """Create the SQLite database if it does not exist yet and seed demo data."""
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cur.execute(
@@ -23,6 +23,16 @@ def init_db():
         """
     )
     conn.commit()
+
+    # Ensure demo user for OAuth client tests exists.
+    cur.execute("SELECT 1 FROM users WHERE username = ?", ("alice",))
+    if not cur.fetchone():
+        cur.execute(
+            "INSERT INTO users (username, password) VALUES (?, ?)",
+            ("alice", generate_password_hash("passw0rd")),
+        )
+        conn.commit()
+
     conn.close()
 
 

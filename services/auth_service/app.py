@@ -16,7 +16,12 @@ from flask import (
     session,
 )
 
-app = Flask(__name__)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+TEMPLATES_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "templates"))
+
+os.environ.setdefault("AUTHLIB_INSECURE_TRANSPORT", "1")
+
+app = Flask(__name__, template_folder=TEMPLATES_DIR)
 app.secret_key = os.environ.get("FLASK_SECRET", "front-secret")
 
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret")
@@ -28,7 +33,7 @@ REFRESH_TOKEN_EXPIRATION_MINUTES = int(
 USER_SERVICE_URL = os.environ.get("USER_SERVICE_URL", "http://127.0.0.1:5001")
 
 refresh_tokens: Dict[str, Dict] = {}  # token -> {"sub": username, "exp": datetime}
-authorization_codes: Dict[str, Dict] = {}
+authorization_codes: Dict[str, "AuthorizationCodeData"] = {}
 issued_tokens: Dict[str, Dict] = {}
 
 
@@ -57,6 +62,12 @@ class InMemoryClient:
     def check_token_endpoint_auth_method(self, method: str) -> bool:
         return method == self.token_endpoint_auth_method
 
+    def check_endpoint_auth_method(self, method: str, endpoint: str) -> bool:
+        # Authlib expects this helper when validating token requests.
+        if endpoint == "token":
+            return self.check_token_endpoint_auth_method(method)
+        return method == self.token_endpoint_auth_method
+
     def check_response_type(self, response_type: str) -> bool:
         return response_type in self.response_types
 
@@ -73,12 +84,47 @@ class InMemoryClient:
         return set(scopes).issubset(allowed)
 
 
+class AuthorizationCodeData:
+    def __init__(
+        self,
+        code: str,
+        client_id: str,
+        redirect_uri: Optional[str],
+        scope: str,
+        user,
+        code_challenge: Optional[str] = None,
+        code_challenge_method: Optional[str] = None,
+    ):
+        self.code = code
+        self.client_id = client_id
+        self.redirect_uri = redirect_uri
+        self.scope = scope
+        self.user = user
+        self.code_challenge = code_challenge
+        self.code_challenge_method = code_challenge_method
+
+    def get_redirect_uri(self):
+        return self.redirect_uri
+
+    def get_scope(self):
+        return self.scope
+
+    def get_client_id(self):
+        return self.client_id
+
+    def get_user(self):
+        return self.user
+
+
 OAUTH_CLIENTS: Dict[str, InMemoryClient] = {
     "student-spa": InMemoryClient(
         client_id="student-spa",
         client_secret=None,
         client_name="Front Demo PKCE",
-        redirect_uris=["http://127.0.0.1:9000/callback"],
+        redirect_uris=[
+            "http://127.0.0.1:9000/callback",
+            "http://127.0.0.1:8000/callback",
+        ],
         grant_types=["authorization_code"],
         response_types=["code"],
         scope="openid profile orders",
@@ -114,21 +160,32 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
     TOKEN_ENDPOINT_AUTH_METHODS = ["client_secret_basic", "none"]
 
     def save_authorization_code(self, code, request):
-        code["user"] = request.user
-        authorization_codes[code["code"]] = code
-        return code
+        request_data = getattr(request, "data", {}) or {}
+        stored_code = AuthorizationCodeData(
+            code=code,
+            client_id=request.client.client_id,
+            redirect_uri=request.redirect_uri,
+            scope=request.scope,
+            user=request.user,
+            code_challenge=getattr(request, "code_challenge", None)
+            or request_data.get("code_challenge"),
+            code_challenge_method=getattr(request, "code_challenge_method", None)
+            or request_data.get("code_challenge_method"),
+        )
+        authorization_codes[code] = stored_code
+        return stored_code
 
     def query_authorization_code(self, code, client):
         stored = authorization_codes.get(code)
-        if stored and stored.get("client_id") == client.client_id:
+        if stored and stored.client_id == client.client_id:
             return stored
         return None
 
     def delete_authorization_code(self, authorization_code):
-        authorization_codes.pop(authorization_code["code"], None)
+        authorization_codes.pop(authorization_code.code, None)
 
     def authenticate_user(self, authorization_code):
-        return authorization_code.get("user")
+        return authorization_code.user
 
     def should_require_code_challenge(self, client):
         # PKCE est obligatoire pour les clients publics (pas de secret)
@@ -265,7 +322,7 @@ def authorize():
         try:
             grant = authorization_server.get_consent_grant(end_user=user)
         except Exception as exc:  # pragma: no cover - simple demo handling
-            return authorization_server.handle_error_response(exc)
+            return authorization_server.handle_error_response(request=request, error=exc)
         return render_template(
             "consent.html", user=user, grant=grant, client=grant.client
         )

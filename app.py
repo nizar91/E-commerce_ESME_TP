@@ -1,5 +1,10 @@
+import base64
+import hashlib
 import os
+import secrets
+import string
 from functools import wraps
+from urllib.parse import urlencode
 
 import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash
@@ -8,6 +13,10 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "front-secret")
 
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://127.0.0.1:5000")
+AUTH_SERVER_URL = os.environ.get("AUTH_SERVICE_URL", "http://127.0.0.1:5002")
+OAUTH_CLIENT_ID = os.environ.get("OAUTH_CLIENT_ID", "student-spa")
+OAUTH_SCOPE = os.environ.get("OAUTH_SCOPE", "openid profile orders")
+OAUTH_REDIRECT_URI = os.environ.get("OAUTH_REDIRECT_URI", "http://127.0.0.1:8000/callback")
 
 # Liste d'articles affiches sur l'interface
 ARTICLES = [
@@ -15,6 +24,20 @@ ARTICLES = [
     {"id": 2, "name": "Article 2"},
     {"id": 3, "name": "Article 3"},
 ]
+
+
+def _base64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def _generate_code_verifier(length: int = 64) -> str:
+    alphabet = string.ascii_letters + string.digits + "-._~"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def _build_code_challenge(verifier: str) -> str:
+    digest = hashlib.sha256(verifier.encode()).digest()
+    return _base64url(digest)
 
 
 def login_required(view_func):
@@ -44,18 +67,31 @@ def refresh_access_token():
         session.clear()
         return False, "Session expiree, merci de vous reconnecter."
 
-    resp, error = call_gateway("POST", "/refresh", json={"refresh_token": refresh_token})
-    if error:
+    try:
+        resp = requests.post(
+            f"{AUTH_SERVER_URL}/oauth/token",
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+                "client_id": OAUTH_CLIENT_ID,
+            },
+            timeout=5,
+        )
+    except requests.RequestException as exc:
         session.clear()
-        return False, error
+        return False, f"Serveur OAuth injoignable ({exc})"
 
     if resp.status_code != 200:
-        payload = resp.json()
         session.clear()
-        return False, payload.get("error", "Impossible de renouveler la session.")
+        try:
+            payload = resp.json()
+            message = payload.get("error_description") or payload.get("error")
+        except ValueError:
+            message = "Impossible de renouveler la session."
+        return False, message or "Impossible de renouveler la session."
 
     data = resp.json()
-    session["token"] = data.get("token")
+    session["token"] = data.get("access_token") or data.get("token")
     session["refresh_token"] = data.get("refresh_token")
     return True, None
 
@@ -82,34 +118,96 @@ def gateway_authenticated_request(method: str, path: str, *, json_body=None):
     return resp, error
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET"])
 def login():
     success_message = request.args.get("success")
+    error_message = request.args.get("error")
+    return render_template("login.html", success=success_message, error=error_message)
 
-    if request.method == "POST":
-        username = (request.form.get("username") or "").strip().lower()
-        password = request.form.get("password") or ""
 
-        if not username or not password:
-            return render_template("login.html", error="Champs requis manquants.")
+@app.route("/oauth/start")
+def oauth_start():
+    code_verifier = _generate_code_verifier()
+    code_challenge = _build_code_challenge(code_verifier)
+    state = secrets.token_urlsafe(32)
 
-        resp, error = call_gateway(
-            "POST", "/login", json={"username": username, "password": password}
+    session["oauth_state"] = state
+    session["oauth_verifier"] = code_verifier
+
+    params = {
+        "response_type": "code",
+        "client_id": OAUTH_CLIENT_ID,
+        "redirect_uri": OAUTH_REDIRECT_URI,
+        "scope": OAUTH_SCOPE,
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+    }
+    authorize_url = f"{AUTH_SERVER_URL}/oauth/authorize?{urlencode(params)}"
+    return redirect(authorize_url)
+
+
+@app.route("/callback")
+def oauth_callback():
+    error = request.args.get("error")
+    if error:
+        description = request.args.get("error_description", "Authentification annulee.")
+        return redirect(url_for("login", error=description))
+
+    state = request.args.get("state")
+    if not state or state != session.get("oauth_state"):
+        session.clear()
+        flash("Etat OAuth invalide, merci de recommencer.", "error")
+        return redirect(url_for("login"))
+
+    code = request.args.get("code")
+    code_verifier = session.get("oauth_verifier")
+    if not code or not code_verifier:
+        session.clear()
+        flash("Code OAuth manquant, merci de recommencer.", "error")
+        return redirect(url_for("login"))
+
+    try:
+        token_resp = requests.post(
+            f"{AUTH_SERVER_URL}/oauth/token",
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": OAUTH_REDIRECT_URI,
+                "client_id": OAUTH_CLIENT_ID,
+                "code_verifier": code_verifier,
+            },
+            timeout=5,
         )
-        if error:
-            return render_template("login.html", error=error)
+    except requests.RequestException as exc:
+        session.clear()
+        flash(f"Serveur OAuth injoignable ({exc})", "error")
+        return redirect(url_for("login"))
 
-        if resp.status_code != 200:
-            payload = resp.json()
-            return render_template("login.html", error=payload.get("error", "Echec de connexion."))
+    if token_resp.status_code != 200:
+        session.clear()
+        try:
+            payload = token_resp.json()
+            message = payload.get("error_description") or payload.get("error")
+        except ValueError:
+            message = "Echec de l'echantillonnage du token."
+        flash(message or "Echec lors de la recuperation du token.", "error")
+        return redirect(url_for("login"))
 
-        data = resp.json()
-        session["token"] = data["token"]
-        session["refresh_token"] = data.get("refresh_token")
-        session["username"] = username
-        return redirect(url_for("home"))
+    data = token_resp.json()
+    access_token = data.get("access_token") or data.get("token")
+    if not access_token:
+        session.clear()
+        flash("Token acces introuvable dans la reponse OAuth.", "error")
+        return redirect(url_for("login"))
 
-    return render_template("login.html", success=success_message)
+    session["token"] = access_token
+    session["refresh_token"] = data.get("refresh_token")
+    session["username"] = data.get("username") or session.get("username") or "utilisateur"
+    session.pop("oauth_state", None)
+    session.pop("oauth_verifier", None)
+
+    return redirect(url_for("home"))
 
 
 @app.route("/logout")
