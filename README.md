@@ -105,10 +105,4 @@ curl -X GET http://127.0.0.1:5000/orders \
      -H "Authorization: Bearer $TOKEN"
 ```
 
-## Points a mettre en avant lors de la restitution
-- **Responsabilites claires** : chaque service a un perimetre reduit (auth, profils, commandes) et peut evoluer/etre deploye independamment.
-- **Securite** : le User Service ne renvoie jamais les mots de passe, seulement des hashes PBKDF2 ; les JWT sont signes cote Auth Service ; la Gateway est le seul point expose et filtre les requetes.
-- **Communication inter-services** : tous les echanges se font via HTTP interne (`requests` cote serveur), ce qui facilite l'observabilite et permet d'ajouter du monitoring ou du circuit breaking.
-- **Extensibilite** : on peut brancher facilement un client web/mobile sur la Gateway, ou greffer de nouveaux services (ex : catalogue) en conservant le meme mecanisme de validation JWT.
 
-Ce TP fournit ainsi une base pour discuter scalabilite (multiplication des instances par service), resilience (timeouts + gestion d'erreurs deja esquissees) et bonnes pratiques de securite elementaires.
