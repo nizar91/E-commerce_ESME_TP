@@ -1,0 +1,8 @@
+#Flask, Flask-Bcrypt, Authlib, requests
+bcrypt==5.0.0
+blinker==1.9.0
+Werkzeug==2.2.3
+Flask==2.2.5
+Flask-Bcrypt==1.0.1
+Authlib==1.2.0
+requests==2.28.1

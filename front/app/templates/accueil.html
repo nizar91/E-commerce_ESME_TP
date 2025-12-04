@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Boutique ESME | Collection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="app-body">
+
+    <header class="fashion-header">
+        <div class="brand">
+            <div class="logo">ES</div>
+            <div>
+                <p class="eyebrow">Boutique ESME</p>
+                <h1>Studio prêt-à-porter</h1>
+            </div>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                Bonjour&nbsp;<strong>{{ user }}</strong>
+            </div>
+            <a href="{{ url_for('login') }}" class="btn-ghost">Déconnexion</a>
+        </div>
+    </header>
+
+    <main class="page">
+        <section class="hero-panel">
+            <div>
+                <p class="hero-tag">Capsule campus — Printemps</p>
+                <h2>Composez votre vestiaire ESME</h2>
+                <p>Pièces essentielles pour les projets, les soutenances et les week-ends. Sélectionnez vos silhouettes et confirmez en un geste.</p>
+            </div>
+            <div class="token-chip">
+                <span class="chip-label">Token actif</span>
+                <span class="chip-value">{{ token[:18] }}...</span>
+            </div>
+        </section>
+
+        <form method="POST" action="/submit_order/{{ user }}" class="order-flow">
+            {% if token %}
+                <input type="hidden" name="user_token" value="{{ token }}">
+            {% endif %}
+
+            <section class="collection-board">
+                <header class="collection-head">
+                    <div>
+                        <p class="eyebrow">Sélection du jour</p>
+                        <h3>Catalogue capsule</h3>
+                    </div>
+                    <div class="collection-note">
+                        <span class="dot"></span>
+                        <p>Mises à jour hebdomadaires · stocks limités</p>
+                    </div>
+                </header>
+                <div class="collection-grid">
+                    <article class="piece-card tone-blush">
+                        <div class="piece-info">
+                            <p class="category">Essentiels</p>
+                            <h3>T-shirt coton premium</h3>
+                            <p class="desc">Jersey 240g · coupe droite · coloris craie.</p>
+                        </div>
+                        <div class="piece-meta">
+                            <span class="price">24,90&nbsp;€</span>
+                            <label class="qty-label">Qté
+                                <input type="number" name="T-shirt coton premium" value="0" min="0">
+                            </label>
+                        </div>
+                    </article>
+
+                    <article class="piece-card tone-indigo">
+                        <div class="piece-info">
+                            <p class="category">Denim Studio</p>
+                            <h3>Jean slim indigo</h3>
+                            <p class="desc">Denim japonais · taille mi-haute · finitions contrastées.</p>
+                        </div>
+                        <div class="piece-meta">
+                            <span class="price">59,90&nbsp;€</span>
+                            <label class="qty-label">Qté
+                                <input type="number" name="Jean slim indigo" value="0" min="0">
+                            </label>
+                        </div>
+                    </article>
+
+                    <article class="piece-card tone-amber">
+                        <div class="piece-info">
+                            <p class="category">Maille</p>
+                            <h3>Pull en laine merinos</h3>
+                            <p class="desc">Laines certifiées · col cheminée · toucher nuage.</p>
+                        </div>
+                        <div class="piece-meta">
+                            <span class="price">69,90&nbsp;€</span>
+                            <label class="qty-label">Qté
+                                <input type="number" name="Pull en laine merinos" value="0" min="0">
+                            </label>
+                        </div>
+                    </article>
+
+                    <article class="piece-card tone-berry">
+                        <div class="piece-info">
+                            <p class="category">Éditions limitées</p>
+                            <h3>Robe d'été fluide</h3>
+                            <p class="desc">Voile italien · bretelles fines · imprimé botanique.</p>
+                        </div>
+                        <div class="piece-meta">
+                            <span class="price">49,90&nbsp;€</span>
+                            <label class="qty-label">Qté
+                                <input type="number" name="Robe d'été fluide" value="0" min="0">
+                            </label>
+                        </div>
+                    </article>
+
+                    <article class="piece-card tone-olive">
+                        <div class="piece-info">
+                            <p class="category">Outerwear</p>
+                            <h3>Veste saharienne</h3>
+                            <p class="desc">Gabardine sable · ceinture intégrée · poches utilitaires.</p>
+                        </div>
+                        <div class="piece-meta">
+                            <span class="price">89,00&nbsp;€</span>
+                            <label class="qty-label">Qté
+                                <input type="number" name="Veste saharienne" value="0" min="0">
+                            </label>
+                        </div>
+                    </article>
+
+                    <article class="piece-card tone-sky">
+                        <div class="piece-info">
+                            <p class="category">Footwear</p>
+                            <h3>Baskets de ville</h3>
+                            <p class="desc">Cuir lisse · semelle recyclée · contraste ivoire.</p>
+                        </div>
+                        <div class="piece-meta">
+                            <span class="price">79,00&nbsp;€</span>
+                            <label class="qty-label">Qté
+                                <input type="number" name="Baskets de ville" value="0" min="0">
+                            </label>
+                        </div>
+                    </article>
+
+                    <article class="piece-card tone-lilac">
+                        <div class="piece-info">
+                            <p class="category">Tailoring</p>
+                            <h3>Chemise classique</h3>
+                            <p class="desc">Popeline stretch · col français · boutons nacrés.</p>
+                        </div>
+                        <div class="piece-meta">
+                            <span class="price">44,90&nbsp;€</span>
+                            <label class="qty-label">Qté
+                                <input type="number" name="Chemise classique" value="0" min="0">
+                            </label>
+                        </div>
+                    </article>
+
+                    <article class="piece-card tone-ice">
+                        <div class="piece-info">
+                            <p class="category">Casual Club</p>
+                            <h3>Sweat oversize</h3>
+                            <p class="desc">Molleton brossé · volume généreux · coloris brume.</p>
+                        </div>
+                        <div class="piece-meta">
+                            <span class="price">39,90&nbsp;€</span>
+                            <label class="qty-label">Qté
+                                <input type="number" name="Sweat oversize" value="0" min="0">
+                            </label>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="summary-panel">
+                <div>
+                    <h4>Valider mon panier</h4>
+                    <p>Notre atelier prépare chacune des commandes sous 24h. Pensez à vérifier vos quantités avant de confirmer.</p>
+                    {% if error_message %}
+                        <div class="error-prompter">{{ error_message }}</div>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn-primary">
+                    <span>Envoyer la sélection</span>
+                    <span class="arrow">→</span>
+                </button>
+            </section>
+        </form>
+    </main>
+
+</body>
+</html>

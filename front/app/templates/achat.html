@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Boutique ESME | Récapitulatif</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg:#050608;
+            --panel:#0f1119;
+            --muted:#9da2b3;
+            --text:#f7f7fb;
+            --success:#68f2c4;
+            --error:#ff8a8f;
+            --warn:#ffd479;
+            --accent:#fcb7af;
+            --border:rgba(255,255,255,0.08);
+        }
+        *{box-sizing:border-box;}
+        body{
+            margin:0;
+            font-family:'Outfit', sans-serif;
+            background:radial-gradient(circle at top,#1e2233 0%, #050608 60%);
+            color:var(--text);
+            min-height:100vh;
+            padding:40px 20px 60px;
+        }
+        .container{
+            max-width:980px;
+            margin:0 auto;
+        }
+        header{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:24px;
+        }
+        .brand{
+            display:flex;
+            align-items:center;
+            gap:14px;
+        }
+        .logo{
+            width:48px;
+            height:48px;
+            border-radius:16px;
+            border:1px solid var(--border);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-weight:600;
+        }
+        .brand h1{
+            margin:0;
+            font-size:1.2rem;
+            letter-spacing:1px;
+        }
+        .card{
+            background:var(--panel);
+            border-radius:24px;
+            border:1px solid var(--border);
+            padding:32px;
+            box-shadow:0 40px 90px rgba(2,3,5,0.55);
+        }
+        .status-card{
+            display:flex;
+            gap:18px;
+            align-items:flex-start;
+            padding:18px 22px;
+            border-radius:18px;
+            border:1px solid var(--border);
+            margin-bottom:24px;
+        }
+        .status-card .icon{
+            width:52px;
+            height:52px;
+            border-radius:16px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:1.4rem;
+            background:rgba(255,255,255,0.04);
+        }
+        .status-card h2{
+            margin:0;
+            font-size:1.25rem;
+        }
+        .status-card p{
+            margin:4px 0 0 0;
+            color:var(--muted);
+        }
+        .status-ok{border-color:rgba(104,242,196,0.5);}
+        .status-ok .icon{background:rgba(104,242,196,0.12); color:var(--success);}
+        .status-error{border-color:rgba(255,138,143,0.5);}
+        .status-error .icon{background:rgba(255,138,143,0.12); color:var(--error);}
+        .status-warn{border-color:rgba(255,212,121,0.45);}
+        .status-warn .icon{background:rgba(255,212,121,0.12); color:var(--warn);}
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:10px;
+        }
+        th,td{
+            padding:14px 10px;
+            text-align:left;
+            font-size:0.95rem;
+        }
+        th{
+            color:var(--muted);
+            font-weight:500;
+            border-bottom:1px solid var(--border);
+        }
+        tbody tr{
+            border-bottom:1px solid rgba(255,255,255,0.04);
+        }
+        tbody tr:last-child{border-bottom:none;}
+        .total-row td{
+            font-weight:600;
+            font-size:1rem;
+            padding-top:18px;
+        }
+        .actions{
+            margin-top:26px;
+            display:flex;
+            gap:14px;
+            flex-wrap:wrap;
+        }
+        .btn{
+            border:none;
+            border-radius:14px;
+            padding:14px 20px;
+            font-weight:600;
+            font-size:0.95rem;
+            cursor:pointer;
+        }
+        .btn-primary{
+            background:linear-gradient(120deg,#ff9487,#ff6f61);
+            color:#050608;
+        }
+        .btn-ghost{
+            background:transparent;
+            color:var(--muted);
+            border:1px solid var(--border);
+        }
+        @media(max-width:640px){
+            .card{padding:22px;}
+            th,td{font-size:0.9rem;}
+            .status-card{flex-direction:column;}
+            .actions{flex-direction:column;}
+        }
+    </style>
+</head>
+<body>
+{% set titles = {
+    'ok': 'Commande confirmée',
+    'error': 'Commande en attente',
+    'error_auth': 'Session expirée',
+    'error_service': 'Service indisponible',
+    'error_internal': 'Vérification requise',
+    'pending': 'Commande en cours'
+} %}
+{% set descriptions = {
+    'ok': 'Votre sélection part en confection, vous recevrez une notification dans la foulée.',
+    'error': 'Le paiement doit être validé. Nous réessaierons automatiquement.',
+    'error_auth': 'Reconnectez-vous pour renouveler le token et renvoyer votre panier.',
+    'error_service': 'Un service est momentanément indisponible, retentez dans quelques instants.',
+    'error_internal': 'Nous n’avons pas pu interpréter la réponse, merci de réessayer.',
+    'pending': 'Nous traitons votre demande, restez sur la page pour suivre son état.'
+} %}
+{% set icons = {
+    'ok': '✓',
+    'error': '⟳',
+    'error_auth': '⛔',
+    'error_service': '⚠',
+    'error_internal': '…',
+    'pending': '…'
+} %}
+{% set status_key = status if status in titles else 'pending' %}
+{% set status_class = 'status-ok' if status_key == 'ok' else ('status-error' if status_key in ['error','error_auth','error_internal'] else 'status-warn') %}
+
+    <div class="container">
+        <header>
+            <div class="brand">
+                <div class="logo">ES</div>
+                <div>
+                    <p class="eyebrow">Boutique ESME</p>
+                    <h1>Récapitulatif de commande</h1>
+                </div>
+            </div>
+            <a href="{{ url_for('accueil') }}" class="btn btn-ghost">Retour boutique</a>
+        </header>
+
+        <section class="card">
+            <div class="status-card {{ status_class }}">
+                <div class="icon">{{ icons[status_key] }}</div>
+                <div>
+                    <h2>{{ titles[status_key] }}</h2>
+                    <p>{{ descriptions[status_key] }}</p>
+                </div>
+            </div>
+
+            {% if order_details %}
+                <div class="order-summary">
+                    <h3>Articles sélectionnés</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set total = 0 %}
+                            {% for item in order_details %}
+                                {% set total = total + item.total_price %}
+                                <tr>
+                                    <td>{{ item.article }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ "%.2f"|format(item.unit_price) }} €</td>
+                                    <td>{{ "%.2f"|format(item.total_price) }} €</td>
+                                </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td colspan="2"></td>
+                                <td>Total</td>
+                                <td>{{ "%.2f"|format(total) }} €</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+            <div class="actions">
+                <a href="{{ url_for('accueil') }}" class="btn btn-primary" style="text-decoration:none; text-align:center;">Ajouter d’autres pièces</a>
+                <a href="{{ url_for('login') }}" class="btn btn-ghost" style="text-decoration:none; text-align:center;">Changer d’utilisateur</a>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
