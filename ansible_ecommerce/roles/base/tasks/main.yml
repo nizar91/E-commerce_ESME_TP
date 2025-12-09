@@ -1,0 +1,14 @@
+---
+- name: Mettre à jour le cache APT
+  apt:
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Installer les paquets de base (curl, git, nginx)
+  apt:
+    name:
+      - curl
+      - git
+      - nginx
+    state: present
+  when: ansible_os_family == "Debian"

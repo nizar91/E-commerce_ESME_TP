@@ -1,0 +1,8 @@
+---
+- name: Configuration des VMs e-commerce
+  hosts: ecom_vms
+  become: true
+
+  roles:
+    - base
+    - app
