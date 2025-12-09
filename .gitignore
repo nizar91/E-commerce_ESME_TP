@@ -1,0 +1,9 @@
+# Fichiers à ignorer
+venv/
+__pycache__/
+*.pyc
+*.db
+*.json
+*.log
+.env
+.DS_Store
