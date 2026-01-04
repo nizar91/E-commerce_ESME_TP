@@ -1,52 +1,65 @@
 #!/usr/bin/env python3
+"""Dynamic inventory that exposes the local Docker host plus RDS outputs."""
+
+from __future__ import annotations
+
 import json
 import subprocess
 import sys
 from pathlib import Path
 
-# Répertoire racine du projet (E-commerce_ESME_TP)
 ROOT = Path(__file__).resolve().parents[2]
 TERRAFORM_DIR = ROOT / "terraform"
 
-def get_terraform_outputs():
-  try:
-    result = subprocess.check_output(
-      ["terraform", "output", "-json"],
-      cwd=TERRAFORM_DIR
-    )
-  except subprocess.CalledProcessError as e:
-    print(f"Erreur lors de 'terraform output -json' : {e}", file=sys.stderr)
-    sys.exit(1)
 
-  return json.loads(result)
+def get_terraform_outputs() -> dict:
+    try:
+        result = subprocess.check_output(
+            ["terraform", "output", "-json"],
+            cwd=TERRAFORM_DIR,
+        )
+    except subprocess.CalledProcessError as exc:
+        print(f"Erreur lors de 'terraform output -json' : {exc}", file=sys.stderr)
+        sys.exit(1)
 
-def main():
-  outputs = get_terraform_outputs()
+    return json.loads(result)
 
-  vm_ips = outputs["vm_ips"]["value"]
-  ports = outputs["docker_ports"]["value"]
 
-  # ⚠️ A ADAPTER : user / clé SSH pour se connecter à la VM
-  ansible_user = "debian"
-  ansible_ssh_key = "vm_TP3 ansible_host=192.168.10.10 ansible_user=debian ansible_ssh_private_key_file=~/.ssh/id_rsa" 
+def main() -> None:
+    outputs = get_terraform_outputs()
 
-  lines = ["[ecom_vms]"]
-  for idx, ip in enumerate(vm_ips, start=1):
-    hostname = f"ecom-vm-{idx:02d}"
+    rds_endpoint = outputs["rds_endpoint"]["value"]
+    rds_port = outputs["rds_port"]["value"]
+    rds_db_name = outputs["rds_db_name"]["value"]
+    rds_username = outputs["rds_username"]["value"]
+    rds_password = outputs["rds_password"]["value"]
+
+    ports = {
+        "front": 5000,
+        "gateway": 5003,
+        "auth": 5002,
+        "orders": 5001,
+    }
+
+    project_dir = ROOT.as_posix()
     line = (
-      f"{hostname} "
-      f"ansible_host={ip} "
-      f"ansible_user={ansible_user} "
-      f"ansible_ssh_private_key_file={ansible_ssh_key} "
-      f"front_port={ports['front']} "
-      f"gateway_port={ports['gateway']} "
-      f"auth_port={ports['auth']} "
-      f"orders_port={ports['orders']}"
+        "localhost "
+        "ansible_connection=local "
+        f"compose_project_dir='{project_dir}' "
+        f"front_port={ports['front']} "
+        f"gateway_port={ports['gateway']} "
+        f"auth_port={ports['auth']} "
+        f"orders_port={ports['orders']} "
+        f"rds_endpoint={rds_endpoint} "
+        f"rds_port={rds_port} "
+        f"rds_db_name={rds_db_name} "
+        f"rds_username={rds_username} "
+        f"rds_password={rds_password}"
     )
-    lines.append(line)
 
-  inventory = "\n".join(lines) + "\n"
-  sys.stdout.write(inventory)
+    inventory = "[local_docker]\n" + line + "\n"
+    sys.stdout.write(inventory)
+
 
 if __name__ == "__main__":
-  main()
+    main()

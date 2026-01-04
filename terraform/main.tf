@@ -2,155 +2,76 @@ terraform {
   required_version = ">= 1.5.0"
 
   required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
-    virtualbox = {
-      source  = "terra-farm/virtualbox"
-      version = "0.2.2-alpha.1"
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
     }
   }
 }
 
-# Provider Docker (local, via /var/run/docker.sock)
-provider "docker" {
-  host = "npipe:////./pipe/docker_engine"
+provider "aws" {
+  region = var.aws_region
 }
 
-# Provider VirtualBox
-provider "virtualbox" {}
+############################################################
+# Networking (use the default VPC to keep the TP simple)
+############################################################
+resource "aws_default_vpc" "default" {}
 
-# ---------- 1) VM(S) VIRTUALBOX ----------
+resource "aws_security_group" "db" {
+  name        = "ecommerce-db"
+  description = "Security group for the shared PostgreSQL database"
+  vpc_id      = aws_default_vpc.default.id
 
-resource "virtualbox_vm" "ecom_vm" {
-  count = var.vm_count
-
-  name   = format("ecom-vm-%02d", count.index + 1)
-
-  # Image Vagrant Ubuntu (exemple) :
-  image = "https://app.vagrantup.com/ubuntu/boxes/bionic64/versions/20180903.0.0/providers/virtualbox.box"
-
-  cpus   = 2
-  memory = "1024 mib"
-
-  # Injecter éventuellement du cloud-init (facultatif)
-  # user_data = file("${path.module}/user_data")
-
-  network_adapter {
-    type           = "hostonly"
-    host_interface = "VirtualBox Host-Only Ethernet Adapter"  # ⚠️ À ADAPTER
+  ingress {
+    description = "Allow PostgreSQL (tp scope)"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = var.db_allowed_cidrs
   }
 
-  status = "running"
-}
-
-# ---------- 2) RÉSEAU DOCKER ----------
-
-resource "docker_network" "ecom_net" {
-  name = "ecom_net"
-}
-
-# ---------- 3) IMAGES DOCKER Pour tes services ----------
-
-resource "docker_image" "auth" {
-  name = "ecom_auth:tp"
-  build {
-    context = "${path.root}/../auth"
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-resource "docker_image" "orders" {
-  name = "ecom_orders:tp"
-  build {
-    context = "${path.root}/../orders"
+############################################################
+# RDS PostgreSQL instance
+############################################################
+data "aws_subnets" "default_vpc_subnets" {
+  filter {
+    name   = "vpc-id"
+    values = [aws_default_vpc.default.id]
   }
 }
 
-resource "docker_image" "gateway" {
-  name = "ecom_gateway:tp"
-  build {
-    context = "${path.root}/../gateway"
-  }
+resource "aws_db_subnet_group" "db" {
+  name        = "ecommerce-db-subnets"
+  subnet_ids  = data.aws_subnets.default_vpc_subnets.ids
+  description = "Subnet group for the ecommerce PostgreSQL database"
 }
 
-resource "docker_image" "front" {
-  name = "ecom_front:tp"
-  build {
-    context = "${path.root}/../front"
-  }
-}
+resource "aws_db_instance" "ecommerce_db" {
+  identifier = "ecommerce-shared-db"
 
-# ---------- 4) CONTENEURS DOCKER ----------
+  engine         = "postgres"
+  engine_version = "15.7"
+  instance_class = "db.t3.micro"
 
-# Auth (Flask port 5002)
-resource "docker_container" "auth" {
-  name  = "auth_service"
-  image = docker_image.auth.image_id
+  allocated_storage = 20
 
-  networks_advanced {
-    name = docker_network.ecom_net.name
-  }
+  db_name  = var.db_name
+  username = var.db_username
+  password = var.db_password
 
-  ports {
-    internal = 5002
-    external = var.auth_host_port
-  }
+  db_subnet_group_name   = aws_db_subnet_group.db.name
+  vpc_security_group_ids = [aws_security_group.db.id]
 
-  must_run = true
-  restart  = "always"
-}
-
-# Orders (Flask port 5001)
-resource "docker_container" "orders" {
-  name  = "orders_service"
-  image = docker_image.orders.image_id
-
-  networks_advanced {
-    name = docker_network.ecom_net.name
-  }
-
-  ports {
-    internal = 5001
-    external = var.orders_host_port
-  }
-
-  must_run = true
-  restart  = "always"
-}
-
-# Gateway (Flask port 5003)
-resource "docker_container" "gateway" {
-  name  = "gateway_service"
-  image = docker_image.gateway.image_id
-
-  networks_advanced {
-    name = docker_network.ecom_net.name
-  }
-
-  ports {
-    internal = 5003
-    external = var.gateway_host_port
-  }
-
-  must_run = true
-  restart  = "always"
-}
-
-# Front (Flask port 5000)
-resource "docker_container" "front" {
-  name  = "front_service"
-  image = docker_image.front.image_id
-
-  networks_advanced {
-    name = docker_network.ecom_net.name
-  }
-
-  ports {
-    internal = 5000
-    external = var.front_host_port
-  }
-
-  must_run = true
-  restart  = "always"
+  publicly_accessible = true
+  skip_final_snapshot = true
+  deletion_protection = false
 }

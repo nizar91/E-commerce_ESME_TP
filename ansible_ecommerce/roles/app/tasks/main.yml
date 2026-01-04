@@ -1,12 +1,6 @@
 ---
-- name: Déployer la configuration nginx pour le front e-commerce
-  template:
-    src: nginx.conf.j2
-    dest: /etc/nginx/nginx.conf
-  notify: restart nginx
-
-- name: S'assurer que nginx est démarré et activé
-  service:
-    name: nginx
-    state: started
-    enabled: yes
+- name: Build and start the Docker Compose stack
+  community.docker.docker_compose:
+    project_src: "{{ compose_project_dir }}"
+    state: present
+    build: true

@@ -1,22 +1,25 @@
-# IPs des VMs (host-only)
-output "vm_ips" {
-  description = "Adresses IP des VMs e-commerce"
-  value       = [for vm in virtualbox_vm.ecom_vm : vm.network_adapter[0].ipv4_address]
+output "rds_endpoint" {
+  description = "Endpoint (hostname) of the PostgreSQL database"
+  value       = aws_db_instance.ecommerce_db.address
 }
 
-# Ports des services Docker (sur la machine hôte)
-output "docker_ports" {
-  description = "Ports exposés pour les services Docker"
-  value = {
-    auth    = var.auth_host_port
-    orders  = var.orders_host_port
-    gateway = var.gateway_host_port
-    front   = var.front_host_port
-  }
+output "rds_port" {
+  description = "Database port exposed by RDS"
+  value       = aws_db_instance.ecommerce_db.port
 }
 
-# URL du front accessible sur la machine hôte
-output "front_url" {
-  description = "URL HTTP du front local"
-  value       = "http://127.0.0.1:${var.front_host_port}"
+output "rds_db_name" {
+  description = "Logical database created on the RDS instance"
+  value       = aws_db_instance.ecommerce_db.db_name
+}
+
+output "rds_username" {
+  description = "Admin user configured for PostgreSQL"
+  value       = var.db_username
+}
+
+output "rds_password" {
+  description = "Admin password (sensitive) for PostgreSQL"
+  value       = var.db_password
+  sensitive   = true
 }

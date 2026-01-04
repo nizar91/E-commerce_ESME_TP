@@ -25,20 +25,18 @@ def ansible_play():
         "playbooks/ecommerce-playbook.yml"
     ], cwd=ANSIBLE_DIR)
 
+def docker_compose_down():
+    run(["docker", "compose", "down", "--remove-orphans"], cwd=ROOT)
+
 def test_front():
     """
     Test simple :
-    - récupère front_url depuis les outputs Terraform
-    - fait un curl sur cette URL
+    - appelle le front local exposé par docker compose
     """
-    result = subprocess.check_output(
-        ["terraform", "output", "-raw", "front_url"],
-        cwd=TERRAFORM_DIR
-    ).decode().strip()
-
-    print(f"\nTest HTTP sur {result}")
+    front_url = "http://127.0.0.1:5000"
+    print(f"\nTest HTTP sur {front_url}")
     try:
-        run(["curl", "-f", result], cwd=ROOT)
+        run(["curl", "-f", front_url], cwd=ROOT)
         print("\nTest HTTP OK (code 200 attendu)")
     except subprocess.CalledProcessError:
         print("\nLe test HTTP a échoué", file=sys.stderr)
@@ -52,11 +50,12 @@ def main():
 
     if action == "deploy":
         terraform_apply()
-        # On laisse un peu de temps aux VMs et conteneurs pour démarrer
-        time.sleep(20)
+        # On laisse un peu de temps au RDS pour être disponible
+        time.sleep(15)
         ansible_play()
         print("\n✅ Déploiement complet terminé.")
     elif action == "destroy":
+        docker_compose_down()
         terraform_destroy()
         print("\n🧹 Infrastructure détruite.")
     elif action == "test":

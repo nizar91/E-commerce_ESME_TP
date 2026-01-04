@@ -1,7 +1,6 @@
----
-- name: Configuration des VMs e-commerce
-  hosts: ecom_vms
-  become: true
+- name: Configuration du poste Docker local
+  hosts: local_docker
+  become: false
 
   roles:
     - base

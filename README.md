@@ -120,48 +120,43 @@ L'interface utilisateur permet :
 
 # ⚙️ Installation & Lancement
 
-## 1️⃣ Installer les dépendances
+## 1️⃣ Déploiement automatisé Docker + AWS
 
-Dans chaque service :
+Pour éviter toute machine virtuelle locale, le pipeline repose désormais sur :
 
-```
-pip install -r requirements.txt
-```
+1. **Terraform** → provisionne uniquement l’infrastructure AWS (RDS PostgreSQL + SG).
+2. **Ansible** → tourne en local (`inventory/inventory.py`) et prépare un fichier `.env` avant de lancer `docker compose up`.
+3. **Docker** → exécute les quatre microservices sur ta machine.
 
-Dépendances principales :
+### Pré-requis
 
-* Flask
-* Authlib
-* Flask-Bcrypt
-* Requests
+* Docker Desktop + l’extension `docker compose`.
+* Terraform ≥ 1.5, Ansible ≥ 2.15, AWS CLI configuré (`aws configure` ou variables `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
+* Collection Ansible Docker : `ansible-galaxy collection install -r ansible_ecommerce/requirements.yml`.
 
----
+### Lancement
 
-## 2️⃣ Lancer les microservices
+```bash
+# 1) Initialiser Terraform et définir les identifiants DB (via TF_VAR_db_username / TF_VAR_db_password)
+cd terraform
+terraform init
 
-### 1. Auth Service (port 5002)
+# 2) Déploiement complet (depuis la racine du repo)
+python deploy.py deploy
 
-```
-python auth_service.py
-```
-
-### 2. Orders Service (port 5001)
-
-```
-python orders_service.py
+# 3) Tester rapidement
+python deploy.py test  # effectue un curl http://127.0.0.1:5000
 ```
 
-### 3. Gateway (port 5003)
+Le script `deploy.py` enchaîne `terraform apply` puis `ansible-playbook`, lequel génère `.env` et effectue `docker compose up -d --build`.
+
+### Arrêt / nettoyage
 
 ```
-python gateway.py
+python deploy.py destroy  # docker compose down + terraform destroy
 ```
 
-### 4. Application Front Flask (port 5000)
-
-```
-python run.py
-```
+> ℹ️ Les scripts historiques (`start_all_services.py`, lancement manuel avec `python auth_service.py`, etc.) restent disponibles pour un usage purement local, mais la voie recommandée du TP est le pipeline Terraform → Ansible → Docker décrit ci-dessus.
 
 ---
 
@@ -252,4 +247,3 @@ Ce projet permet d'apprendre :
 * API Gateway
 * communication inter-services
 * architecture distribuée
-
