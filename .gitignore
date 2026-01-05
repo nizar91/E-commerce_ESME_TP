@@ -7,3 +7,7 @@ __pycache__/
 *.log
 .env
 .DS_Store
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+.terraform.lock.hcl

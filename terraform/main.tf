@@ -55,11 +55,16 @@ resource "aws_db_subnet_group" "db" {
   description = "Subnet group for the ecommerce PostgreSQL database"
 }
 
+data "aws_rds_engine_version" "postgres" {
+  engine = "postgres"
+  # Let AWS select the latest generally available PostgreSQL version in the current region.
+}
+
 resource "aws_db_instance" "ecommerce_db" {
   identifier = "ecommerce-shared-db"
 
-  engine         = "postgres"
-  engine_version = "15.7"
+  engine         = data.aws_rds_engine_version.postgres.engine
+  engine_version = data.aws_rds_engine_version.postgres.version
   instance_class = "db.t3.micro"
 
   allocated_storage = 20
